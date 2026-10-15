@@ -50,6 +50,10 @@ public class TimerApp extends JFrame {
         add(panel, BorderLayout.NORTH);
         add(new JScrollPane(log), BorderLayout.CENTER);
 
+        JButton clearButton = new JButton("Очистить журнал");
+        clearButton.addActionListener(e -> log.setText(""));
+        add(clearButton, BorderLayout.SOUTH);
+
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -92,27 +96,37 @@ public class TimerApp extends JFrame {
 
         } else if (index == 1) {
             write("Упражнение началось. Продолжительность — 10 секунд.");
-            final long started = System.nanoTime();
+            final long finishAt = System.nanoTime() + 10_000_000_000L;
 
-            timer.scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    long elapsedSeconds =
-                            (System.nanoTime() - started) / 1_000_000_000L;
+timer.scheduleAtFixedRate(new TimerTask() {
+    private long previousRemaining = -1;
 
-                    long remaining = Math.max(0, 10 - elapsedSeconds);
+    @Override
+    public void run() {
+        long remainingNanos = Math.max(
+                0L, finishAt - System.nanoTime()
+        );
 
-                    showResult(index, timer, () -> {
-                        if (remaining > 0) {
-                            write("Упражнение: осталось " + remaining + " сек.");
-                        } else {
-                            Toolkit.getDefaultToolkit().beep();
-                            write("Упражнение завершено!");
-                            finishTimer(index);
-                        }
-                    });
-                }
-            }, 0, 1000);
+        long remaining =
+                (remainingNanos + 999_999_999L) / 1_000_000_000L;
+
+        if (remaining == previousRemaining) {
+            return;
+        }
+
+        previousRemaining = remaining;
+
+        showResult(index, timer, () -> {
+            if (remaining > 0) {
+                write("Упражнение: осталось " + remaining + " сек.");
+            } else {
+                Toolkit.getDefaultToolkit().beep();
+                write("Упражнение завершено!");
+                finishTimer(index);
+            }
+        });
+    }
+}, 0, 50);
 
         } else {
             write("Повторяющийся сигнал запущен. Период — 3 секунды.");
